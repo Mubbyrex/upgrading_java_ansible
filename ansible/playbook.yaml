@@ -1,0 +1,5 @@
+- name: Java installation
+  hosts: all
+  become: true
+  roles:
+    - { role: java_install, tags: ["java"] }

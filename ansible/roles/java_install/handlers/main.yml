@@ -1,0 +1,7 @@
+---
+# handlers file for java_install
+
+- name: Reload profile
+  shell: source /etc/profile
+  args:
+    executable: /bin/bash 
