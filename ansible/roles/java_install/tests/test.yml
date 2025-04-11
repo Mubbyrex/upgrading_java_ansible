@@ -1,5 +1,20 @@
 ---
-- hosts: localhost
-  remote_user: root
+- name: Test Java Install Role
+  hosts: localhost
+  become: true
+  vars:
+    java_version: "21"
+    set_java_home: true
   roles:
     - java_install
+
+  post_tasks:
+    - name: Verify Java is installed
+      shell: java -version
+      register: java_output
+      changed_when: false
+      failed_when: java_output.rc != 0
+
+    - name: Show Java version
+      debug:
+        var: java_output.stdout

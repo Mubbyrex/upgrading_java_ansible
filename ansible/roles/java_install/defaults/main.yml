@@ -1,2 +1,9 @@
 ---
 # defaults file for java_install
+java_version: "21"
+java_build: "35"
+java_platform: "linux-x64"
+java_package_type: "jdk"
+install_path: "/opt/java"
+set_java_home: true
+jdk_download_url: "https://download.oracle.com/java/{{ java_version }}/latest/{{ java_package_type }}-{{ java_version }}_{{ java_platform }}_bin.tar.gz"

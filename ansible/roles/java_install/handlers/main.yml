@@ -1,7 +1,4 @@
----
-# handlers file for java_install
-
 - name: Reload profile
-  shell: source /etc/profile
+  shell: 'source /etc/profile && echo "JAVA_HOME is now $JAVA_HOME"'
   args:
-    executable: /bin/bash 
+    executable: /bin/bash
