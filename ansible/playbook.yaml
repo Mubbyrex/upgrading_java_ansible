@@ -2,7 +2,7 @@
   hosts: all
   become: true
   vars:
-    java_version: "21"
+    java_version: "17"
     install_path: "/opt/java"
     set_java_home: true
   roles:

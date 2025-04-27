@@ -27,13 +27,13 @@ data "aws_ami" "amazon-linux-image" {
   }
 }
 
-resource "aws_instance" "rhel7" {
+resource "aws_instance" "java-install-test-instance" {
   ami           = data.aws_ami.amazon-linux-image.id
   instance_type = "t2.micro"
   key_name      = "iam_mubarak" # Replace with your key pair name
   security_groups = [aws_security_group.allow_ssh.name]
   tags = {
-    Name = "rhel7-instance"
+    Name = "java-install-test-instance"
   }
 }
 
@@ -57,5 +57,5 @@ resource "aws_security_group" "allow_ssh" {
 }
 
 output "public_ip" {
-  value = aws_instance.rhel7.public_ip
+  value = aws_instance.java-install-test-instance.public_ip
 }

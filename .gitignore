@@ -1,6 +1,6 @@
 # Terraform
 .terraform/
-*.tfstate
+terraform/*.tfstate
 *.tfstate.*
 .terraform.lock.hcl
 terraform.tfvars
@@ -28,3 +28,9 @@ Thumbs.db
 
 # Log files
 *.log
+
+
+# Ansible
+# Inventory files
+ansible/inventory.*
+

@@ -40,6 +40,11 @@
       register: jdk_dir
       when: java_install_needed
 
+    - name: Debug - Show found JDK directories
+      debug:
+        var: jdk_dir
+      when: java_install_needed
+
     - name: Set JAVA_HOME variable
       set_fact:
         java_home: "{{ jdk_dir.files[0].path }}"
