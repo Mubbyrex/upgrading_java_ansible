@@ -1,4 +1,3 @@
----
 - name: Determine Java URL based on version and distribution
   set_fact:
     jdk_download_url: >-
@@ -18,7 +17,7 @@
         {% elif java_version == '17' %}
           https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.{{ adoptium_java_builds['17'] }}%2B8/OpenJDK17U-jdk_x64_linux_hotspot_17.0.{{ adoptium_java_builds['17'] }}_8.tar.gz
         {% elif java_version == '21' %}
-          https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.{{ adoptium_java_builds['21'] }}%2B9/OpenJDK21U-jdk_x64_linux_hotspot_21.0.{{ adoptium_java_builds['21'] }}_9.tar.gz
+          https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21%2B{{ adoptium_java_builds['21'] }}/OpenJDK21U-jdk_x64_linux_hotspot_21_{{ adoptium_java_builds['21'] }}.tar.gz
         {% else %}
           https://github.com/adoptium/temurin{{ java_major_version }}-binaries/releases/latest/download/OpenJDK{{ java_major_version }}U-jdk_x64_linux_hotspot_{{ java_version }}.tar.gz
         {% endif %}
