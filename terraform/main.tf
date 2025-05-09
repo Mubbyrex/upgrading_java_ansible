@@ -29,11 +29,16 @@ data "aws_ami" "amazon-linux-image" {
 
 resource "aws_instance" "java-install-test-instance" {
   ami           = data.aws_ami.amazon-linux-image.id
-  instance_type = "t2.micro"
+  instance_type = "t3.small"
   key_name      = "iam_mubarak" # Replace with your key pair name
   security_groups = [aws_security_group.allow_ssh.name]
   tags = {
     Name = "java-install-test-instance"
+  }
+
+  root_block_device {
+    volume_size = 30
+    volume_type = "gp2"
   }
 }
 

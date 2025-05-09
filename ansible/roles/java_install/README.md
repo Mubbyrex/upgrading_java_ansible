@@ -1,38 +1,51 @@
-Role Name
-=========
+# Java Installation Role
 
-A brief description of the role goes here.
+A flexible Ansible role that installs various versions of Java from multiple sources.
 
-Requirements
-------------
+## Features
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+- Supports Oracle JDK (versions 8, 11, 17, 21, 24+)
+- Supports Adoptium OpenJDK (Eclipse Temurin)
+- Handles different download URL patterns for various Java versions
+- Sets up JAVA_HOME environment variable
+- Creates appropriate symlinks
 
-Role Variables
---------------
+## Role Variables
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+| Variable            | Default      | Description                                         |
+|---------------------|--------------|-----------------------------------------------------|
+| java_distribution   | "oracle"     | Java distribution to install ('oracle' or 'adoptium') |
+| java_version        | "21"         | Java version to install (e.g., "8", "11", "17", "21") |
+| java_platform       | "linux-x64"  | Platform for the Java installation                  |
+| java_package_type   | "jdk"        | Package type ('jdk' or 'jre')                       |
+| install_path        | "/opt/java"  | Base installation path                              |
+| set_java_home       | true         | Whether to set the JAVA_HOME environment variable   |
 
-Dependencies
-------------
+## Example Playbook
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+```yaml
+- hosts: servers
+  become: true
+  vars:
+    java_distribution: "oracle"     # or "adoptium"
+    java_version: "17"              # Supports 8, 11, 17, 21, 24, etc.
+    install_path: "/opt/java"
+    set_java_home: true
+  roles:
+    - role: java_install
+```
 
-Example Playbook
-----------------
+## Notes
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
+For Oracle Java, the role handles the different URL patterns for:
+- Legacy versions (Java 8) which use uXXX notation
+- Semantic versioning (Java 9-19) which use X.0.Y+Z notation
+- Latest versions (Java 21+) which use simpler URLs
 
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
+## License
 
-License
--------
+MIT
 
-BSD
+## Author Information
 
-Author Information
-------------------
-
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+Mubarak Ibrahim

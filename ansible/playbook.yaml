@@ -2,9 +2,9 @@
   hosts: all
   become: true
   vars:
-    java_version: "17"
+    java_distribution: "adoptium"
+    java_version: "21"
     install_path: "/opt/java"
-    set_java_home: true
   roles:
     - role: java_install
       tags: ["java"]
