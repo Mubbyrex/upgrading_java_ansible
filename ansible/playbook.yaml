@@ -3,7 +3,7 @@
   become: true
   vars:
     java_distribution: "adoptium"
-    java_version: "21"
+    java_version: "8"
     install_path: "/opt/java"
   roles:
     - role: java_install

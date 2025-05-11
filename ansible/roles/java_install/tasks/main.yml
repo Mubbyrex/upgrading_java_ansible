@@ -11,13 +11,17 @@
         {% endif %}
       {% elif java_distribution == 'adoptium' %}
         {% if java_version == '8' %}
-          https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u{{ adoptium_java_builds['8'] }}-b08/OpenJDK8U-jdk_x64_linux_hotspot_8u{{ adoptium_java_builds['8'] }}b08.tar.gz
+          https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u{{ adoptium_java_builds['8'] }}-b09/OpenJDK8U-jdk_x64_linux_hotspot_8u{{ adoptium_java_builds['8'] }}b09.tar.gz
         {% elif java_version == '11' %}
-          https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.{{ adoptium_java_builds['11'] }}%2B8/OpenJDK11U-jdk_x64_linux_hotspot_11.0.{{ adoptium_java_builds['11'] }}_8.tar.gz
+          https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.{{ adoptium_java_builds['11'] }}%2B6/OpenJDK11U-jdk_x64_linux_hotspot_11.0.{{ adoptium_java_builds['11'] }}_6.tar.gz
         {% elif java_version == '17' %}
-          https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.{{ adoptium_java_builds['17'] }}%2B8/OpenJDK17U-jdk_x64_linux_hotspot_17.0.{{ adoptium_java_builds['17'] }}_8.tar.gz
+          https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.{{ adoptium_java_builds['17'] }}%2B6/OpenJDK17U-jdk_x64_linux_hotspot_17.0.{{ adoptium_java_builds['17'] }}_6.tar.gz
         {% elif java_version == '21' %}
           https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21%2B{{ adoptium_java_builds['21'] }}/OpenJDK21U-jdk_x64_linux_hotspot_21_{{ adoptium_java_builds['21'] }}.tar.gz
+        {% elif java_version == '23' %}
+          https://github.com/adoptium/temurin23-binaries/releases/latest/download/OpenJDK23U-jdk_x64_linux_hotspot_23_36.tar.gz
+        {% elif java_version == '24' %}
+          https://github.com/adoptium/temurin24-binaries/releases/download/jdk-24%2B{{ adoptium_java_builds['24'] }}/OpenJDK24U-jdk_x64_linux_hotspot_24_{{ adoptium_java_builds['24'] }}.tar.gz
         {% else %}
           https://github.com/adoptium/temurin{{ java_major_version }}-binaries/releases/latest/download/OpenJDK{{ java_major_version }}U-jdk_x64_linux_hotspot_{{ java_version }}.tar.gz
         {% endif %}
@@ -95,8 +99,9 @@
         mode: "0755"
       when: not (java_distribution == 'openjdk' and use_package_manager | bool)
 
+    # FIXED: Improved Java version check
     - name: Check if Java {{ java_version }} is already installed
-      shell: java -version 2>&1 | grep -q "{{ java_version }}"
+      shell: "java -version 2>&1 | grep -E 'version \"{{ java_version }}(\\.|\\+|$)\"'"
       register: java_check
       ignore_errors: yes
       changed_when: false
@@ -183,32 +188,34 @@
       when: java_install_needed
       register: jdk_extract
 
+    # --- ALWAYS LIST DIRECTORY CONTENTS EVEN IF INSTALLATION NOT NEEDED ---
     - name: List files in installation directory
       find:
         paths: "{{ install_path }}"
         file_type: directory
       register: install_dir_contents
-      when: java_install_needed
 
     - name: Debug - Show install directory contents
       debug:
         var: install_dir_contents
         verbosity: 1
-      when: java_install_needed
 
-    - name: Discover JDK install path
+    # --- ALWAYS SEARCH FOR THE CORRECT JAVA VERSION REGARDLESS OF INSTALL FLAG ---
+    - name: Set JDK search pattern
+      set_fact:
+        jdk_search_pattern: "*jdk*{{ java_version }}*"
+
+    - name: Discover JDK install path for version {{ java_version }}
       find:
         paths: "{{ install_path }}"
-        patterns: "{{ java_directory_pattern }}"
+        patterns: "{{ jdk_search_pattern }}"
         file_type: directory
       register: jdk_dir
-      when: java_install_needed
 
     - name: Debug - Show found JDK directories
       debug:
         var: jdk_dir
         verbosity: 1
-      when: java_install_needed
 
     - name: Fallback pattern if no JDK directory found
       find:
@@ -216,22 +223,27 @@
         patterns: "*jdk*"
         file_type: directory
       register: jdk_fallback
-      when: java_install_needed and (jdk_dir.files is undefined or jdk_dir.files | length == 0)
+      when: jdk_dir.files is undefined or jdk_dir.files | length == 0
 
-    - name: Set JAVA_HOME variable from discovered JDK dir
+    - name: Set JAVA_HOME variable from discovered JDK dir for version {{ java_version }}
       set_fact:
         java_home: "{{ jdk_dir.files[0].path }}"
-      when: java_install_needed and jdk_dir.files is defined and jdk_dir.files | length > 0
+      when: jdk_dir.files is defined and jdk_dir.files | length > 0
 
     - name: Set JAVA_HOME variable from fallback if primary search failed
       set_fact:
         java_home: "{{ jdk_fallback.files[0].path }}"
-      when: java_install_needed and (jdk_dir.files is undefined or jdk_dir.files | length == 0) and jdk_fallback.files is defined and jdk_fallback.files | length > 0
+      when: (jdk_dir.files is undefined or jdk_dir.files | length == 0) and jdk_fallback.files is defined and jdk_fallback.files | length > 0
 
     - name: Fail if no Java installation directory could be found
       fail:
         msg: "Could not determine the Java installation directory. Please check the downloaded archive and extraction process."
-      when: java_install_needed and (java_home is undefined)
+      when: java_home is undefined
+
+    - name: Debug - Selected Java Home
+      debug:
+        var: java_home
+        verbosity: 1
 
     - name: Export JAVA_HOME in /etc/profile
       lineinfile:
