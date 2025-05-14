@@ -1,3 +1,4 @@
+---
 - name: Install Java using custom Ansible role
   hosts: all
   become: true
@@ -5,7 +6,26 @@
     java_distribution: "oracle"
     java_version: "17"
     install_path: "/opt/java"
+    # Make sure this path is correct and the file exists
     custom_jdk_path: "/home/mubarak/Downloads/jdk-17.0.15_linux-x64_bin.tar.gz"
+
+  pre_tasks:
+    - name: Check if custom JDK path exists locally
+      stat:
+        path: "{{ custom_jdk_path }}"
+      delegate_to: localhost
+      become: false
+      register: jdk_file_check
+
+    - name: Display JDK file check result
+      debug:
+        msg: "JDK file exists: {{ jdk_file_check.stat.exists }}"
+
+    - name: Fail if JDK file doesn't exist
+      fail:
+        msg: "The JDK file at {{ custom_jdk_path }} does not exist. Please check the path."
+      when: not jdk_file_check.stat.exists
+
   roles:
     - role: java_install
       tags: ["java"]

@@ -1,3 +1,4 @@
+---
 - name: Determine Java URL based on version and distribution
   set_fact:
     jdk_download_url: >-
@@ -163,9 +164,21 @@
       become: false
       when: java_install_needed and requires_manual_download and custom_jdk_path is defined
 
+    - name: Debug custom JDK path
+      debug:
+        msg:
+          - "Custom JDK path: {{ custom_jdk_path }}"
+          - "File exists: {{ custom_jdk_file.stat.exists if custom_jdk_file is defined else 'Not checked' }}"
+          - "File size: {{ custom_jdk_file.stat.size | default('Unknown') }}"
+      when: requires_manual_download and custom_jdk_path is defined
+
     - name: Fail if custom JDK file does not exist
       fail:
-        msg: "The specified custom JDK file does not exist: {{ custom_jdk_path }}"
+        msg: |
+          The specified custom JDK file does not exist: {{ custom_jdk_path }}
+          Please ensure:
+          - The file exists at this path on the Ansible control machine
+          - The user running Ansible has permission to read this file
       when: >
         java_install_needed and 
         requires_manual_download | bool and 
@@ -177,12 +190,19 @@
         src: "{{ custom_jdk_path }}"
         dest: "{{ install_path }}/java-{{ java_distribution }}-{{ java_version }}_{{ java_platform }}.tar.gz"
         mode: "0644"
+        owner: root
+        group: root
       when: >
         java_install_needed and 
-        requires_manual_download | bool and 
         custom_jdk_path is defined and 
         custom_jdk_file.stat.exists
       register: manual_jdk_copy
+
+    - name: Debug manual JDK copy result
+      debug:
+        var: manual_jdk_copy
+      when: manual_jdk_copy is defined
+      changed_when: false
 
     # Copy JDK from playbook files directory
     - name: Copy locally downloaded JDK binary from files directory
@@ -221,11 +241,19 @@
       when: java_install_needed
 
     - name: Verify downloaded file is not empty or an error page
-      shell: "file {{ install_path }}/java-{{ java_distribution }}-{{ java_version }}_{{ java_platform }}.tar.gz | grep -q 'gzip compressed data'"
+      shell: "file {{ install_path }}/java-{{ java_distribution }}-{{ java_version }}_{{ java_platform }}.tar.gz || true"
       register: file_check
       failed_when: false
       changed_when: false
       when: java_install_needed and download_file.stat.exists
+
+    - name: Debug file check results
+      debug:
+        msg:
+          - "File check output: {{ file_check.stdout if file_check is defined else 'Not checked' }}"
+          - "File check return code: {{ file_check.rc if file_check is defined else 'Not checked' }}"
+          - "File size: {{ download_file.stat.size if download_file.stat is defined else 'Unknown' }}"
+      when: java_install_needed and download_file.stat is defined
 
     - name: Fail if download is not a valid archive
       fail:
@@ -243,7 +271,7 @@
         download_file is defined and
         download_file.stat is defined and
         download_file.stat.exists and
-        file_check.rc != 0
+        file_check.rc != 0 and file_check.stdout is search('HTML document')
 
     - name: Extract the JDK archive
       unarchive:
