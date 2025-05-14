@@ -99,7 +99,6 @@
         mode: "0755"
       when: not (java_distribution == 'openjdk' and use_package_manager | bool)
 
-    # FIXED: Improved Java version check
     - name: Check if Java {{ java_version }} is already installed
       shell: "java -version 2>&1 | grep -E 'version \"{{ java_version }}(\\.|\\+|$)\"'"
       register: java_check
@@ -129,6 +128,7 @@
         path: "{{ playbook_dir }}/files/jdk-{{ java_version }}_{{ java_platform }}_bin.tar.gz"
       register: local_jdk_file
       delegate_to: localhost
+      become: false
       when: java_install_needed and java_distribution == 'oracle'
 
     - name: Copy locally downloaded JDK binary (for Oracle JDK)
@@ -138,6 +138,7 @@
         mode: "0644"
       when: java_install_needed and java_distribution == 'oracle' and local_jdk_file.stat.exists
       register: jdk_copy
+      become: true
 
     - name: Download JDK binary (for non-Oracle JDK or when local file not available)
       get_url:

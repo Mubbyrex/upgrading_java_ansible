@@ -2,8 +2,8 @@
   hosts: all
   become: true
   vars:
-    java_distribution: "adoptium"
-    java_version: "8"
+    java_distribution: "oracle"
+    java_version: "17"
     install_path: "/opt/java"
   roles:
     - role: java_install

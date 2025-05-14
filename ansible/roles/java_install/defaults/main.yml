@@ -36,6 +36,8 @@ oracle_java_sha_tokens:
   "8": "8a1589aa0fe24566b4337beee47c2d29"
   "11": "c8da8ea3a895f23cedd362132950d1c5"
   "17": "4f092786cec841d58ae21840b10204d7"
+  "21": "267b10b14b4e5fada19aca3be3b961ce4f81f1bd3ffcd070e90a5586106125eb"
+  "24": "07096b29c65feb393972870347f36021be421a74c1800be468b3c19f04e8e943"
 
 # URL patterns for different Java versions
 oracle_java_urls:
