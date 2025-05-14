@@ -2,8 +2,8 @@
   set_fact:
     jdk_download_url: >-
       {% if java_distribution == 'oracle' %}
-        {% if java_major_version | int < 9 %}
-          {{ oracle_java_urls.legacy }}
+        {% if java_major_version | int in [8, 11, 17] %}
+          null
         {% elif java_major_version | int >= 9 and java_major_version | int < 20 %}
           {{ oracle_java_urls.semver }}
         {% else %}
@@ -31,6 +31,12 @@
         {% else %}
           https://github.com/adoptium/temurin{{ java_major_version }}-binaries/releases/latest/download/OpenJDK{{ java_major_version }}U-jdk_x64_linux_hotspot_{{ java_version }}.tar.gz
         {% endif %}
+      {% endif %}
+    requires_manual_download: >-
+      {% if java_distribution == 'oracle' and java_major_version | int in [8, 11, 17] %}
+        true
+      {% else %}
+        false
       {% endif %}
 
 - name: Install OpenJDK using package manager if selected
@@ -88,6 +94,11 @@
     var: jdk_download_url
     verbosity: 1
 
+- name: Debug - Requires manual download
+  debug:
+    var: requires_manual_download
+    verbosity: 1
+
 - name: Java Installation Block
   block:
     - name: Ensure Java install directory exists
@@ -114,33 +125,79 @@
         var: java_install_needed
         verbosity: 1
 
+    - name: Fail if manual download is required but custom_jdk_path is not provided
+      fail:
+        msg: >
+          Oracle JDK {{ java_version }} requires authentication for download.
+          Please manually download the JDK from Oracle's website and provide the path
+          using the 'custom_jdk_path' variable. Example:
+          ansible-playbook playbook.yaml -e "custom_jdk_path=/path/to/jdk-{{ java_version }}_{{ java_platform }}_bin.tar.gz"
+      when: >
+        java_install_needed and
+        requires_manual_download | bool and
+        (custom_jdk_path is not defined or custom_jdk_path | length == 0)
+
     - name: Debug - Detailed download info
       debug:
         msg:
           - "Java distribution: {{ java_distribution }}"
           - "Java version: {{ java_version }}"
-          - "Download URL: {{ jdk_download_url }}"
+          - "Download URL: {{ jdk_download_url if not requires_manual_download else 'Manual download required' }}"
+          - "Custom JDK path: {{ custom_jdk_path | default('Not provided') }}"
           - "Local file check path: {{ playbook_dir }}/files/jdk-{{ java_version }}_{{ java_platform }}_bin.tar.gz"
       when: java_install_needed
 
-    - name: Check if local JDK binary exists
+    - name: Check if local JDK binary exists in playbook files directory
       stat:
         path: "{{ playbook_dir }}/files/jdk-{{ java_version }}_{{ java_platform }}_bin.tar.gz"
       register: local_jdk_file
       delegate_to: localhost
       become: false
-      when: java_install_needed and java_distribution == 'oracle'
+      when: java_install_needed and not requires_manual_download
 
-    - name: Copy locally downloaded JDK binary (for Oracle JDK)
+    - name: Check if custom JDK path exists
+      stat:
+        path: "{{ custom_jdk_path }}"
+      register: custom_jdk_file
+      delegate_to: localhost
+      become: false
+      when: java_install_needed and requires_manual_download and custom_jdk_path is defined
+
+    - name: Fail if custom JDK file does not exist
+      fail:
+        msg: "The specified custom JDK file does not exist: {{ custom_jdk_path }}"
+      when: >
+        java_install_needed and 
+        requires_manual_download | bool and 
+        custom_jdk_path is defined and 
+        not custom_jdk_file.stat.exists
+
+    - name: Copy manually downloaded JDK binary
+      copy:
+        src: "{{ custom_jdk_path }}"
+        dest: "{{ install_path }}/java-{{ java_distribution }}-{{ java_version }}_{{ java_platform }}.tar.gz"
+        mode: "0644"
+      when: >
+        java_install_needed and 
+        requires_manual_download | bool and 
+        custom_jdk_path is defined and 
+        custom_jdk_file.stat.exists
+      register: manual_jdk_copy
+
+    # Copy JDK from playbook files directory
+    - name: Copy locally downloaded JDK binary from files directory
       copy:
         src: "{{ playbook_dir }}/files/jdk-{{ java_version }}_{{ java_platform }}_bin.tar.gz"
         dest: "{{ install_path }}/java-{{ java_distribution }}-{{ java_version }}_{{ java_platform }}.tar.gz"
         mode: "0644"
-      when: java_install_needed and java_distribution == 'oracle' and local_jdk_file.stat.exists
+      when: >
+        java_install_needed and 
+        not requires_manual_download and 
+        local_jdk_file.stat.exists
       register: jdk_copy
-      become: true
 
-    - name: Download JDK binary (for non-Oracle JDK or when local file not available)
+    # Download JDK for versions that don't require authentication
+    - name: Download JDK binary (for non-Oracle JDK or Oracle versions that don't require auth)
       get_url:
         url: "{{ jdk_download_url }}"
         dest: "{{ install_path }}/java-{{ java_distribution }}-{{ java_version }}_{{ java_platform }}.tar.gz"
@@ -148,8 +205,9 @@
         mode: "0644"
       when: >
         java_install_needed and
-        (java_distribution != 'oracle' or
-        (java_distribution == 'oracle' and not local_jdk_file.stat.exists))
+        not requires_manual_download | bool and
+        local_jdk_file is defined and
+        not local_jdk_file.stat.exists
       register: jdk_download
       retries: 3
       delay: 5
@@ -173,13 +231,19 @@
       fail:
         msg: >
           The downloaded file is not a valid Java archive. 
+          {% if java_distribution == 'oracle' %}
           Oracle JDK downloads typically require authentication. 
-          Please manually download the JDK from Oracle's website and place it in the 'files' directory of your playbook.
-          Expected file: files/jdk-{{ java_version }}_{{ java_platform }}_bin.tar.gz
+          Please manually download the JDK from Oracle's website and provide it using the custom_jdk_path variable.
+          Example: -e "custom_jdk_path=/path/to/jdk-{{ java_version }}_{{ java_platform }}_bin.tar.gz"
+          {% else %}
+          Please check the download URL or try again later.
+          {% endif %}
       when: >
         java_install_needed and
-        (not download_file.stat.exists or 
-        (file_check.rc != 0 and java_distribution == 'oracle'))
+        download_file is defined and
+        download_file.stat is defined and
+        download_file.stat.exists and
+        file_check.rc != 0
 
     - name: Extract the JDK archive
       unarchive:

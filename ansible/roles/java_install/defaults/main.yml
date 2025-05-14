@@ -12,6 +12,9 @@ java_package_type: "jdk"
 install_path: "/opt/java"
 set_java_home: true
 
+# Path to manually downloaded JDK tarball (required for Oracle JDK 8, 11, and 17)
+# custom_jdk_path: "/path/to/your/jdk-17_linux-x64_bin.tar.gz"
+
 # Use package manager for OpenJDK (only applicable when java_distribution is 'openjdk')
 use_package_manager: true
 
