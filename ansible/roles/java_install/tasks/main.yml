@@ -33,12 +33,7 @@
           https://github.com/adoptium/temurin{{ java_major_version }}-binaries/releases/latest/download/OpenJDK{{ java_major_version }}U-jdk_x64_linux_hotspot_{{ java_version }}.tar.gz
         {% endif %}
       {% endif %}
-    requires_manual_download: >-
-      {% if java_distribution == 'oracle' and java_major_version | int in [8, 11, 17] %}
-        true
-      {% else %}
-        false
-      {% endif %}
+    requires_manual_download: "{{ java_distribution == 'oracle' and java_major_version | int in [8, 11, 17] }}"
 
 - name: Install OpenJDK using package manager if selected
   block:
@@ -181,7 +176,7 @@
           - The user running Ansible has permission to read this file
       when: >
         java_install_needed and 
-        requires_manual_download | bool and 
+        requires_manual_download and 
         custom_jdk_path is defined and 
         not custom_jdk_file.stat.exists
 
@@ -195,7 +190,7 @@
       when: >
         java_install_needed and 
         custom_jdk_path is defined and 
-        custom_jdk_file.stat.exists
+        requires_manual_download
       register: manual_jdk_copy
 
     - name: Debug manual JDK copy result
@@ -204,7 +199,7 @@
       when: manual_jdk_copy is defined
       changed_when: false
 
-    # Copy JDK from playbook files directory
+      # Copy JDK from playbook files directory
     - name: Copy locally downloaded JDK binary from files directory
       copy:
         src: "{{ playbook_dir }}/files/jdk-{{ java_version }}_{{ java_platform }}_bin.tar.gz"
@@ -225,9 +220,7 @@
         mode: "0644"
       when: >
         java_install_needed and
-        not requires_manual_download | bool and
-        local_jdk_file is defined and
-        not local_jdk_file.stat.exists
+        not requires_manual_download | bool
       register: jdk_download
       retries: 3
       delay: 5
