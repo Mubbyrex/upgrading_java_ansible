@@ -3,8 +3,8 @@
   hosts: all
   become: true
   vars:
-    java_distribution: "adoptium"
-    java_version: "24"
+    java_distribution: "openjdk"
+    java_version: "11"
     install_path:
       "/opt/java"
       # Make sure this path is correct and the file exists

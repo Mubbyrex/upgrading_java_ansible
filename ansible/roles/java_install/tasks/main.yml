@@ -52,6 +52,34 @@
       when: ansible_os_family == "RedHat"
       register: openjdk_yum_install
 
+    - name: Set Java {{ java_major_version }} as the default alternative
+      alternatives:
+        name: java
+        path: "/usr/lib/jvm/java-{{ java_major_version }}-openjdk-amd64/bin/java"
+        priority: 1710
+      when: ansible_os_family == "Debian"
+
+    - name: Register javac for Java {{ java_major_version }}
+      alternatives:
+        name: javac
+        path: "/usr/lib/jvm/java-{{ java_major_version }}-openjdk-amd64/bin/java"
+        priority: 1710
+      when: ansible_os_family == "Debian"
+
+    - name: Set Java {{ java_major_version }} as the default alternative on RHEL
+      alternatives:
+        name: java
+        path: "/usr/lib/jvm/java-{{ java_major_version }}-openjdk/bin/java"
+        priority: 1710
+      when: ansible_os_family == "RedHat"
+
+    - name: Register javac for Java {{ java_major_version }} on RHEL
+      alternatives:
+        name: javac
+        path: "/usr/lib/jvm/java-{{ java_major_version }}-openjdk/bin/javac"
+        priority: 1710
+      when: ansible_os_family == "RedHat"
+
     - name: Find OpenJDK installation path on Debian
       shell: readlink -f /usr/bin/java | sed 's|/bin/java||'
       register: openjdk_path_debian
@@ -104,7 +132,6 @@
         owner: root
         group: root
         mode: "0755"
-      when: not (java_distribution == 'openjdk' and use_package_manager | bool)
 
     - name: Check if Java {{ java_version }} is already installed
       shell: "java -version 2>&1 | grep -E 'version \"{{ java_version }}(\\.|\\+|$)\"'"
@@ -363,16 +390,17 @@
         state: link
       when: java_install_needed
 
+  when: not (java_distribution == 'openjdk' and use_package_manager | bool)
+  become: true
+  tags: [java]
+
+- name: Confirm Java installation
+  block:
     - name: Confirm Java installed
       shell: java -version
       register: java_verify
       changed_when: false
-      when: java_install_needed
 
     - name: Display Java version
       debug:
         var: java_verify.stderr_lines
-      when: java_install_needed
-
-  become: true
-  tags: [java]
